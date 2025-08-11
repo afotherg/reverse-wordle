@@ -10,8 +10,11 @@
             max-width: 600px;
             margin: 0 auto;
             padding: 20px;
+            padding-bottom: 80px;
             background-color: #121213;
             color: white;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
         
         h1 {
@@ -60,6 +63,20 @@
             background-color: #121213;
             color: white;
             text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .letter-tile:hover {
+            transform: scale(1.05);
+        }
+        
+        .letter-tile.clickable {
+            cursor: pointer;
+        }
+        
+        .letter-tile.clickable:hover {
+            border-color: #818384;
         }
         
         .letter-tile.correct {
@@ -85,7 +102,15 @@
             padding: 20px;
             background-color: #1a1a1b;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .feedback-section .submit-button {
+            position: sticky;
+            bottom: 10px;
+            z-index: 10;
+            margin-top: 10px;
         }
         
         .feedback-section.active {
@@ -221,7 +246,7 @@
             <div class="feedback-buttons" id="feedbackButtons">
                 <!-- Feedback buttons will be populated by JavaScript -->
             </div>
-            <button onclick="submitFeedback()">Submit Feedback</button>
+            <button class="submit-button" onclick="submitFeedback()">Submit Feedback</button>
         </div>
         
         <div class="control-buttons">
@@ -15323,6 +15348,17 @@
             for (let i = 0; i < 5; i++) {
                 const tile = document.getElementById(`tile-${row}-${i}`);
                 tile.textContent = word[i];
+                
+                // Make tiles clickable for current guess only
+                if (row === currentGuess) {
+                    tile.classList.add('clickable', 'not-in-word');
+                    tile.onclick = () => cycleTileFeedback(row, i);
+                    // Set default feedback to gray
+                    feedbackData[i] = 'not-in-word';
+                } else {
+                    tile.classList.remove('clickable');
+                    tile.onclick = null;
+                }
             }
         }
         
@@ -15355,7 +15391,7 @@
                 yellowBtn.onclick = () => selectFeedback(i, 'wrong-position');
                 
                 const grayBtn = document.createElement('button');
-                grayBtn.className = 'feedback-btn gray';
+                grayBtn.className = 'feedback-btn gray selected'; // Default selection
                 grayBtn.textContent = '✗';
                 grayBtn.onclick = () => selectFeedback(i, 'not-in-word');
                 
@@ -15388,10 +15424,41 @@
             else if (type === 'not-in-word') buttons[2].classList.add('selected');
         }
         
+        // Cycle through feedback colors when clicking a tile
+        function cycleTileFeedback(row, col) {
+            if (row !== currentGuess || !gameActive) return;
+            
+            const tile = document.getElementById(`tile-${row}-${col}`);
+            const currentClasses = tile.className;
+            
+            // Cycle through: gray -> green -> yellow -> gray
+            if (currentClasses.includes('not-in-word')) {
+                tile.className = 'letter-tile clickable correct';
+                feedbackData[col] = 'correct';
+                selectFeedback(col, 'correct');
+            } else if (currentClasses.includes('correct')) {
+                tile.className = 'letter-tile clickable wrong-position';
+                feedbackData[col] = 'wrong-position';
+                selectFeedback(col, 'wrong-position');
+            } else if (currentClasses.includes('wrong-position')) {
+                tile.className = 'letter-tile clickable not-in-word';
+                feedbackData[col] = 'not-in-word';
+                selectFeedback(col, 'not-in-word');
+            }
+        }
+        
         // Submit feedback and continue game
         function submitFeedback() {
-            if (feedbackData.length < 5) {
-                alert('Please mark all 5 letters!');
+            // Check if all 5 positions have feedback (no undefined values)
+            let missingFeedback = 0;
+            for (let i = 0; i < 5; i++) {
+                if (feedbackData[i] === undefined) {
+                    missingFeedback++;
+                }
+            }
+            
+            if (missingFeedback > 0) {
+                alert(`Please mark all 5 letters! (${missingFeedback} letters still need feedback)`);
                 return;
             }
             
