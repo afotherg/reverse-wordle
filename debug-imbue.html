@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug IMBUE Test</title>
+</head>
+<body>
+    <h1>Debug Test for IMBUE</h1>
+    <div id="output"></div>
+
+    <script>
+        // Simplified word list for testing
+        const WORD_LIST = ['AROSE', 'IMBUE', 'ADIEU', 'AUDIO', 'SLATE', 'CRANE', 'TRACE'];
+        let possibleWords = [...WORD_LIST];
+        let usedWords = [];
+        
+        // The word filtering logic from the game
+        function isWordPossible(word, guess, feedback) {
+            console.log(`Testing if "${word}" is possible given guess "${guess}" and feedback:`, feedback);
+            
+            // Count letter occurrences in guess with different feedback types
+            const letterFeedback = {};
+            
+            for (let i = 0; i < 5; i++) {
+                const letter = guess[i];
+                if (!letterFeedback[letter]) {
+                    letterFeedback[letter] = {correct: [], wrongPosition: [], notInWord: []};
+                }
+                letterFeedback[letter][feedback[i] === 'correct' ? 'correct' : 
+                                     feedback[i] === 'wrong-position' ? 'wrongPosition' : 'notInWord'].push(i);
+            }
+            
+            console.log('Letter feedback analysis:', letterFeedback);
+            
+            // Check each letter constraint
+            for (const [letter, constraints] of Object.entries(letterFeedback)) {
+                console.log(`Checking letter "${letter}":`, constraints);
+                
+                // Check correct positions
+                for (const pos of constraints.correct) {
+                    if (word[pos] !== letter) {
+                        console.log(`  FAIL: ${word}[${pos}] = "${word[pos]}" should be "${letter}"`);
+                        return false;
+                    }
+                }
+                
+                // Check wrong positions
+                for (const pos of constraints.wrongPosition) {
+                    if (word[pos] === letter) {
+                        console.log(`  FAIL: ${word}[${pos}] = "${letter}" but letter shouldn't be in position ${pos}`);
+                        return false;
+                    }
+                    if (!word.includes(letter)) {
+                        console.log(`  FAIL: "${word}" should contain letter "${letter}" but doesn't`);
+                        return false;
+                    }
+                }
+                
+                // Check not-in-word only if letter doesn't appear as correct or wrong-position
+                if (constraints.notInWord.length > 0 && 
+                    constraints.correct.length === 0 && 
+                    constraints.wrongPosition.length === 0) {
+                    if (word.includes(letter)) {
+                        console.log(`  FAIL: "${word}" contains "${letter}" but it should not be in word`);
+                        return false;
+                    }
+                }
+                
+                // Handle mixed feedback for same letter
+                if (constraints.correct.length > 0 || constraints.wrongPosition.length > 0) {
+                    const expectedCount = constraints.correct.length + constraints.wrongPosition.length;
+                    const actualCount = (word.match(new RegExp(letter, 'g')) || []).length;
+                    
+                    console.log(`  Letter "${letter}" expected count: ${expectedCount}, actual count in "${word}": ${actualCount}`);
+                    
+                    // If some instances are marked "not-in-word", the word should have exactly the expected count
+                    if (constraints.notInWord.length > 0 && actualCount !== expectedCount) {
+                        console.log(`  FAIL: Mixed feedback - expected exactly ${expectedCount} "${letter}" but found ${actualCount}`);
+                        return false;
+                    }
+                    // If no instances are marked "not-in-word", the word should have at least the expected count
+                    if (constraints.notInWord.length === 0 && actualCount < expectedCount) {
+                        console.log(`  FAIL: Expected at least ${expectedCount} "${letter}" but found ${actualCount}`);
+                        return false;
+                    }
+                }
+                
+                console.log(`  PASS: Letter "${letter}" constraints satisfied`);
+            }
+            
+            console.log(`✓ "${word}" is possible!`);
+            return true;
+        }
+        
+        function testScenario() {
+            const output = document.getElementById('output');
+            
+            // Simulate the first few guesses against IMBUE
+            console.log('=== Testing IMBUE scenario ===');
+            
+            // First guess: AROSE vs IMBUE
+            console.log('\n--- First guess: AROSE vs IMBUE ---');
+            // A-gray, R-gray, O-gray, S-gray, E-correct
+            let feedback1 = ['not-in-word', 'not-in-word', 'not-in-word', 'not-in-word', 'correct'];
+            
+            console.log('Initial possible words:', possibleWords.length);
+            possibleWords = possibleWords.filter(word => isWordPossible(word, 'AROSE', feedback1));
+            console.log('After AROSE feedback, remaining words:', possibleWords);
+            
+            // Second guess: Let's say ADIEU vs IMBUE
+            console.log('\n--- Second guess: ADIEU vs IMBUE ---');
+            // A-gray, D-gray, I-wrong-position, E-wrong-position, U-correct
+            let feedback2 = ['not-in-word', 'not-in-word', 'wrong-position', 'wrong-position', 'correct'];
+            
+            possibleWords = possibleWords.filter(word => isWordPossible(word, 'ADIEU', feedback2));
+            console.log('After ADIEU feedback, remaining words:', possibleWords);
+            
+            // Check if IMBUE is still in the list
+            if (possibleWords.includes('IMBUE')) {
+                output.innerHTML += '<p style="color: green;">✓ IMBUE is correctly maintained in possible words</p>';
+            } else {
+                output.innerHTML += '<p style="color: red;">✗ IMBUE was incorrectly filtered out!</p>';
+            }
+            
+            output.innerHTML += `<p>Remaining possible words: ${possibleWords.join(', ')}</p>`;
+        }
+        
+        testScenario();
+    </script>
+</body>
+</html>
