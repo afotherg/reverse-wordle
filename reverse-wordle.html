@@ -113,6 +113,36 @@
             margin-top: 10px;
         }
         
+        .undo-button {
+            position: fixed;
+            bottom: 70px;
+            right: 20px;
+            z-index: 15;
+            background-color: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .undo-button:hover:not(:disabled) {
+            background-color: #ff5252;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        
+        .undo-button:disabled {
+            background-color: #ccc;
+            color: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
         .feedback-section.active {
             display: flex;
         }
@@ -254,6 +284,9 @@
             <button onclick="resetGame()">Reset</button>
         </div>
     </div>
+    
+    <!-- Floating undo button -->
+    <button id="undoButton" class="undo-button" onclick="undoLastGuess()" disabled>Undo Last Guess</button>
 
     <script>
         // Game state
@@ -263,6 +296,9 @@
         let possibleWords = [];
         let usedWords = [];
         let gameWon = false;
+        
+        // Undo state tracking
+        let gameStateHistory = [];
         
         // Comprehensive 5-letter word list - includes most common English words
         // Complete official Wordle word list - all 14,854 valid words
@@ -15152,10 +15188,12 @@
             gameWon = false;
             possibleWords = [...WORD_LIST];
             usedWords = [];
+            gameStateHistory = [];
             
             initializeBoard();
             document.getElementById('status').textContent = 'Think of a word, then click to see my guess!';
             document.getElementById('feedbackSection').classList.remove('active');
+            updateUndoButton();
             
             makeGuess();
         }
@@ -15168,10 +15206,124 @@
             possibleWords = [];
             usedWords = [];
             currentWord = '';
+            gameStateHistory = [];
             
             initializeBoard();
             document.getElementById('status').textContent = 'Click "Start Game" to begin!';
             document.getElementById('feedbackSection').classList.remove('active');
+            updateUndoButton();
+        }
+        
+        // Save current game state for undo functionality
+        function saveGameState() {
+            const state = {
+                gameActive: gameActive,
+                currentGuess: currentGuess,
+                currentWord: currentWord,
+                possibleWords: [...possibleWords],
+                usedWords: [...usedWords],
+                gameWon: gameWon,
+                boardState: getBoardState()
+            };
+            gameStateHistory.push(state);
+            updateUndoButton();
+        }
+        
+        // Get current board state for restoration
+        function getBoardState() {
+            const state = [];
+            for (let row = 0; row < 6; row++) {
+                const rowState = [];
+                for (let col = 0; col < 5; col++) {
+                    const tile = document.getElementById(`tile-${row}-${col}`);
+                    if (tile) {
+                        rowState.push({
+                            letter: tile.textContent,
+                            classes: tile.className
+                        });
+                    }
+                }
+                state.push(rowState);
+            }
+            return state;
+        }
+        
+        // Restore board state
+        function restoreBoardState(boardState) {
+            for (let row = 0; row < 6; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const tile = document.getElementById(`tile-${row}-${col}`);
+                    if (tile && boardState[row] && boardState[row][col]) {
+                        tile.textContent = boardState[row][col].letter;
+                        tile.className = boardState[row][col].classes;
+                    }
+                }
+            }
+        }
+        
+        // Undo last guess
+        function undoLastGuess() {
+            if (gameStateHistory.length === 0) return;
+            
+            const previousState = gameStateHistory.pop();
+            
+            // Restore all game state variables
+            gameActive = previousState.gameActive;
+            currentGuess = previousState.currentGuess;
+            currentWord = previousState.currentWord;
+            possibleWords = [...previousState.possibleWords];
+            usedWords = [...previousState.usedWords];
+            gameWon = previousState.gameWon;
+            
+            // Restore board visual state
+            restoreBoardState(previousState.boardState);
+            
+            // If there's a current word (meaning we can undo), 
+            // show the feedback section and make tiles clickable
+            if (currentWord && gameActive) {
+                // Reset feedback data
+                feedbackData = [];
+                
+                // Make the tiles for the current guess clickable again
+                // Remove feedback colors and add clickable functionality
+                for (let i = 0; i < 5; i++) {
+                    const tile = document.getElementById(`tile-${currentGuess}-${i}`);
+                    if (tile) {
+                        // Remove all feedback colors but keep the letter
+                        tile.classList.remove('correct', 'wrong-position', 'not-in-word');
+                        // Add clickable functionality with default gray
+                        tile.classList.add('clickable', 'not-in-word');
+                        tile.onclick = () => cycleTileFeedback(currentGuess, i);
+                        // Set default feedback to gray
+                        feedbackData[i] = 'not-in-word';
+                    }
+                }
+                
+                // Show feedback section for the current word
+                showFeedbackSection(currentWord);
+                
+                // Update status to show current guess
+                const availableWords = possibleWords.filter(word => !usedWords.includes(word));
+                document.getElementById('status').textContent = `My guess is: ${currentWord} (${availableWords.length} possibilities left)`;
+            } else {
+                // Hide feedback section if no current word
+                document.getElementById('feedbackSection').classList.remove('active');
+                
+                // Update status message
+                if (currentGuess === 0) {
+                    document.getElementById('status').textContent = 'Think of a word, then click to see my guess!';
+                } else {
+                    document.getElementById('status').textContent = 'Click to continue...';
+                }
+            }
+            
+            updateUndoButton();
+        }
+        
+        // Update undo button state
+        function updateUndoButton() {
+            const undoButton = document.getElementById('undoButton');
+            undoButton.disabled = gameStateHistory.length === 0 || !gameActive;
         }
         
         // Calculate entropy of a guess - how much information it provides
@@ -15490,6 +15642,9 @@
                 document.getElementById('feedbackSection').classList.remove('active');
                 return;
             }
+            
+            // Save current state before making changes (for undo functionality)
+            saveGameState();
             
             // Filter possible words based on feedback
             filterPossibleWords();
