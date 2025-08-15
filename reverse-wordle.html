@@ -15299,24 +15299,38 @@
             // Filter out already used words
             const availableWords = possibleWords.filter(word => !usedWords.includes(word));
             
+            console.log(`[DEBUG] === MAKING GUESS ${currentGuess + 1} ===`);
+            console.log(`[DEBUG] Possible words: ${possibleWords.length} (${possibleWords.slice(0, 5).join(', ')}${possibleWords.length > 5 ? '...' : ''})`);
+            console.log(`[DEBUG] Used words: ${usedWords.join(', ')}`);
+            console.log(`[DEBUG] Available words: ${availableWords.length} (${availableWords.join(', ')})`);
+            
             if (currentGuess === 0) {
                 // First guess: use optimal starting word
                 guess = usedWords.includes('AROSE') ? 'ADIEU' : 'AROSE';
+                console.log(`[DEBUG] Branch: First guess -> ${guess}`);
             } else if (availableWords.length === 1) {
                 // Only one option left
                 guess = availableWords[0];
+                console.log(`[DEBUG] Branch: Only one option left -> ${guess}`);
             } else if (availableWords.length > 0) {
                 // Use information theory to find best guess
                 guess = findBestGuess(availableWords);
+                console.log(`[DEBUG] Branch: Information theory -> ${guess}`);
+            } else {
+                console.log(`[DEBUG] Branch: No available words - triggering fallback!`);
             }
             
             // Final fallback: pick any unused word from the entire dictionary
             if (!guess || usedWords.includes(guess)) {
+                console.log(`[DEBUG] 🚨 FALLBACK TRIGGERED! guess=${guess}, already used=${usedWords.includes(guess)}`);
                 const unusedWords = WORD_LIST.filter(word => !usedWords.includes(word));
+                console.log(`[DEBUG] Unused words: ${unusedWords.length} available`);
                 if (unusedWords.length > 0) {
                     // Prefer common words first
                     const unusedCommon = getCommonWords().filter(word => !usedWords.includes(word));
+                    console.log(`[DEBUG] Unused common words: ${unusedCommon.join(', ')}`);
                     guess = unusedCommon[0] || unusedWords[0];
+                    console.log(`[DEBUG] Fallback selected: ${guess}`);
                 } else {
                     // This should never happen with our large word list
                     guess = 'ERROR';
@@ -15495,9 +15509,20 @@
         
         // Filter possible words based on feedback
         function filterPossibleWords() {
+            console.log(`[DEBUG] Before filtering: ${possibleWords.length} words`);
+            console.log(`[DEBUG] Current word: ${currentWord}, Feedback: ${feedbackData.join(',')}`);
+            console.log(`[DEBUG] Possible words before: ${possibleWords.slice(0, 10).join(', ')}${possibleWords.length > 10 ? '...' : ''}`);
+            
             possibleWords = possibleWords.filter(word => {
-                return isWordPossible(word, currentWord, feedbackData);
+                const possible = isWordPossible(word, currentWord, feedbackData);
+                if (!possible && (word === 'KNELL' || word === 'KNELT')) {
+                    console.log(`[DEBUG] ❌ ${word} eliminated by ${currentWord} with feedback ${feedbackData.join(',')}`);
+                }
+                return possible;
             });
+            
+            console.log(`[DEBUG] After filtering: ${possibleWords.length} words`);
+            console.log(`[DEBUG] Remaining words: ${possibleWords.slice(0, 10).join(', ')}${possibleWords.length > 10 ? '...' : ''}`);
         }
         
         // Check if a word is possible given the guess and feedback
@@ -15540,12 +15565,30 @@
                     const actualCount = (word.match(new RegExp(letter, 'g')) || []).length;
                     
                     // If some instances are marked "not-in-word", the word should have exactly the expected count
-                    if (constraints.notInWord.length > 0 && actualCount !== expectedCount) {
-                        return false;
-                    }
-                    // If no instances are marked "not-in-word", the word should have at least the expected count
-                    if (constraints.notInWord.length === 0 && actualCount < expectedCount) {
-                        return false;
+                    // UNLESS the word has more instances that could be in valid positions
+                    if (constraints.notInWord.length > 0) {
+                        // Check if extra letters are in positions not marked as "not-in-word"
+                        const notInWordPositions = new Set(constraints.notInWord);
+                        let validExtraCount = 0;
+                        
+                        for (let i = 0; i < word.length; i++) {
+                            if (word[i] === letter && !notInWordPositions.has(i) && 
+                                !constraints.correct.includes(i) && !constraints.wrongPosition.includes(i)) {
+                                validExtraCount++;
+                            }
+                        }
+                        
+                        if (actualCount > expectedCount + validExtraCount) {
+                            return false;
+                        }
+                        if (actualCount < expectedCount) {
+                            return false;
+                        }
+                    } else {
+                        // If no instances are marked "not-in-word", the word should have at least the expected count
+                        if (actualCount < expectedCount) {
+                            return false;
+                        }
                     }
                 }
             }
