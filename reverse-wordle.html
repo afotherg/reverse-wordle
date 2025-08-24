@@ -94,24 +94,7 @@
             border-color: #3a3a3c;
         }
         
-        .feedback-section {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            padding: 20px;
-            background-color: #1a1a1b;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            position: relative;
-        }
-        
-        .feedback-section .submit-button {
-            position: sticky;
-            bottom: 10px;
-            z-index: 10;
-            margin-top: 10px;
-        }
+        /* Removed legacy bottom grading UI styles */
         
         .undo-button {
             position: fixed;
@@ -143,76 +126,7 @@
             opacity: 0.6;
         }
         
-        .feedback-section.active {
-            display: flex;
-        }
-        
-        .feedback-title {
-            font-size: 18px;
-            font-weight: bold;
-        }
-        
-        .feedback-buttons {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .feedback-letter {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .feedback-letter-display {
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            border: 2px solid #3a3a3c;
-            background-color: #121213;
-            color: white;
-            text-transform: uppercase;
-        }
-        
-        .feedback-controls {
-            display: flex;
-            gap: 5px;
-        }
-        
-        .feedback-btn {
-            width: 30px;
-            height: 30px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        
-        .feedback-btn.green {
-            background-color: #538d4e;
-            color: white;
-        }
-        
-        .feedback-btn.yellow {
-            background-color: #b59f3b;
-            color: white;
-        }
-        
-        .feedback-btn.gray {
-            background-color: #3a3a3c;
-            color: white;
-        }
-        
-        .feedback-btn.selected {
-            border: 3px solid white;
-        }
+        /* end removed styles */
         
         .control-buttons {
             display: flex;
@@ -261,8 +175,7 @@
     
     <div class="instructions">
         Think of a 5-letter word. The computer will try to guess it!<br>
-        After each guess, mark each letter: <span style="color: #538d4e;">Green</span> (correct position), 
-        <span style="color: #b59f3b;">Yellow</span> (wrong position), or <span style="color: #3a3a3c;">Gray</span> (not in word).
+        After each guess, click each tile to cycle colors: Gray → Green → Yellow. Set all five to match Wordle’s result, then click “Submit Feedback”. Use “Undo Last Guess” if a grading mistake was made.
     </div>
     
     <div class="game-container">
@@ -272,16 +185,9 @@
             <!-- Game board will be populated by JavaScript -->
         </div>
         
-        <div class="feedback-section" id="feedbackSection">
-            <div class="feedback-title">Mark each letter in the guess:</div>
-            <div class="feedback-buttons" id="feedbackButtons">
-                <!-- Feedback buttons will be populated by JavaScript -->
-            </div>
-            <button class="submit-button" onclick="submitFeedback()">Submit Feedback</button>
-        </div>
-        
         <div class="control-buttons">
             <button onclick="startGame()">Start Game</button>
+            <button id="submitButton" onclick="submitFeedback()" disabled>Submit Feedback</button>
             <button onclick="resetGame()">Reset</button>
         </div>
     </div>
@@ -334,8 +240,8 @@
             
             initializeBoard();
             document.getElementById('status').textContent = 'Think of a word, then click to see my guess!';
-            document.getElementById('feedbackSection').classList.remove('active');
             updateUndoButton();
+            updateSubmitButton();
             
             makeGuess();
         }
@@ -352,8 +258,8 @@
             
             initializeBoard();
             document.getElementById('status').textContent = 'Click "Start Game" to begin!';
-            document.getElementById('feedbackSection').classList.remove('active');
             updateUndoButton();
+            updateSubmitButton();
         }
         
         // Save current game state for undo functionality
@@ -420,8 +326,7 @@
             // Restore board visual state
             restoreBoardState(previousState.boardState);
             
-            // If there's a current word (meaning we can undo), 
-            // show the feedback section and make tiles clickable
+            // If there's a current word (meaning we can undo), make tiles clickable again
             if (currentWord && gameActive) {
                 // Reset feedback data
                 feedbackData = [];
@@ -441,16 +346,10 @@
                     }
                 }
                 
-                // Show feedback section for the current word
-                showFeedbackSection(currentWord);
-                
                 // Update status to show current guess
                 const availableWords = possibleWords.filter(word => !usedWords.includes(word));
                 document.getElementById('status').textContent = `My guess is: ${currentWord} (${availableWords.length} possibilities left)`;
             } else {
-                // Hide feedback section if no current word
-                document.getElementById('feedbackSection').classList.remove('active');
-                
                 // Update status message
                 if (currentGuess === 0) {
                     document.getElementById('status').textContent = 'Think of a word, then click to see my guess!';
@@ -460,6 +359,7 @@
             }
             
             updateUndoButton();
+            updateSubmitButton();
         }
         
         // Update undo button state
@@ -600,7 +500,7 @@
             
             if (currentGuess === 0) {
                 // First guess: use optimal starting word
-                guess = usedWords.includes('AROSE') ? 'ADIEU' : 'AROSE';
+                guess = usedWords.includes('LEAST') ? 'ADIEU' : 'LEAST';
                 console.log(`[DEBUG] Branch: First guess -> ${guess}`);
             } else if (availableWords.length === 1) {
                 // Only one option left
@@ -642,7 +542,7 @@
             usedWords.push(guess);
             currentWord = guess;
             displayGuess(guess, currentGuess);
-            showFeedbackSection(guess);
+            updateSubmitButton();
             
             // Show additional info for debugging
             const remaining = availableWords.length;
@@ -670,67 +570,8 @@
             }
         }
         
-        // Show feedback section
-        function showFeedbackSection(word) {
-            const section = document.getElementById('feedbackSection');
-            const buttonsContainer = document.getElementById('feedbackButtons');
-            
-            buttonsContainer.innerHTML = '';
-            
-            for (let i = 0; i < 5; i++) {
-                const letterDiv = document.createElement('div');
-                letterDiv.className = 'feedback-letter';
-                
-                const letterDisplay = document.createElement('div');
-                letterDisplay.className = 'feedback-letter-display';
-                letterDisplay.textContent = word[i];
-                
-                const controls = document.createElement('div');
-                controls.className = 'feedback-controls';
-                
-                const greenBtn = document.createElement('button');
-                greenBtn.className = 'feedback-btn green';
-                greenBtn.textContent = '✓';
-                greenBtn.onclick = () => selectFeedback(i, 'correct');
-                
-                const yellowBtn = document.createElement('button');
-                yellowBtn.className = 'feedback-btn yellow';
-                yellowBtn.textContent = '?';
-                yellowBtn.onclick = () => selectFeedback(i, 'wrong-position');
-                
-                const grayBtn = document.createElement('button');
-                grayBtn.className = 'feedback-btn gray selected'; // Default selection
-                grayBtn.textContent = '✗';
-                grayBtn.onclick = () => selectFeedback(i, 'not-in-word');
-                
-                controls.appendChild(greenBtn);
-                controls.appendChild(yellowBtn);
-                controls.appendChild(grayBtn);
-                
-                letterDiv.appendChild(letterDisplay);
-                letterDiv.appendChild(controls);
-                buttonsContainer.appendChild(letterDiv);
-            }
-            
-            section.classList.add('active');
-        }
-        
         // Track feedback selections
         let feedbackData = [];
-        
-        function selectFeedback(position, type) {
-            feedbackData[position] = type;
-            
-            // Update button appearances
-            const controls = document.querySelectorAll('.feedback-controls')[position];
-            const buttons = controls.querySelectorAll('.feedback-btn');
-            
-            buttons.forEach(btn => btn.classList.remove('selected'));
-            
-            if (type === 'correct') buttons[0].classList.add('selected');
-            else if (type === 'wrong-position') buttons[1].classList.add('selected');
-            else if (type === 'not-in-word') buttons[2].classList.add('selected');
-        }
         
         // Cycle through feedback colors when clicking a tile
         function cycleTileFeedback(row, col) {
@@ -743,15 +584,12 @@
             if (currentClasses.includes('not-in-word')) {
                 tile.className = 'letter-tile clickable correct';
                 feedbackData[col] = 'correct';
-                selectFeedback(col, 'correct');
             } else if (currentClasses.includes('correct')) {
                 tile.className = 'letter-tile clickable wrong-position';
                 feedbackData[col] = 'wrong-position';
-                selectFeedback(col, 'wrong-position');
             } else if (currentClasses.includes('wrong-position')) {
                 tile.className = 'letter-tile clickable not-in-word';
                 feedbackData[col] = 'not-in-word';
-                selectFeedback(col, 'not-in-word');
             }
         }
         
@@ -781,7 +619,7 @@
                 gameWon = true;
                 gameActive = false;
                 document.getElementById('status').innerHTML = '<span class="won">I got it! 🎉</span>';
-                document.getElementById('feedbackSection').classList.remove('active');
+                updateSubmitButton();
                 return;
             }
             
@@ -794,7 +632,7 @@
             // Move to next guess
             currentGuess++;
             feedbackData = [];
-            document.getElementById('feedbackSection').classList.remove('active');
+            updateSubmitButton();
             
             if (currentGuess >= 6) {
                 gameActive = false;
@@ -893,6 +731,14 @@
             return true;
         }
         
+        // Enable/disable submit based on game state
+        function updateSubmitButton() {
+            const btn = document.getElementById('submitButton');
+            if (!btn) return;
+            const canSubmit = gameActive && currentWord && currentGuess < 6;
+            btn.disabled = !canSubmit;
+        }
+
         // Initialize the game
         initializeBoard();
     </script>
