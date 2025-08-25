@@ -484,6 +484,22 @@
             return ['AROSE', 'ADIEU', 'AUDIO', 'LOUIE', 'OUIJA', 'RAISE', 'SLATE', 'CRANE', 'TRACE', 'CRATE'];
         }
         
+        // Get the best 100 starting words for random selection
+        function getBestStartingWords() {
+            return [
+                'AROSE', 'ADIEU', 'AUDIO', 'LOUIE', 'OUIJA', 'RAISE', 'SLATE', 'CRANE', 'TRACE', 'CRATE',
+                'SLANT', 'STARE', 'LEAST', 'SNARE', 'TALES', 'TEARS', 'RATES', 'TARES', 'CARES', 'RACES',
+                'STALE', 'SNARL', 'STERN', 'STONE', 'STORE', 'HORSE', 'SHORE', 'THOSE', 'HOUSE', 'MOUSE',
+                'NOISE', 'POISE', 'PROSE', 'TONES', 'BONES', 'CONES', 'NODES', 'ROPES', 'HOPES', 'MOPES',
+                'NOTES', 'VOTES', 'SIREN', 'OILER', 'ALINE', 'ALIEN', 'SNEAK', 'SNAKE', 'STAKE', 'SHAKE',
+                'SHAPE', 'SHADE', 'SHARE', 'SPARE', 'SPACE', 'PLACE', 'PLANE', 'PLATE', 'BRAVE', 'GRAVE',
+                'GRACE', 'FRAME', 'FLAME', 'BLAME', 'CLAMP', 'CHAMP', 'STAMP', 'STOMP', 'STUMP', 'SLUMP',
+                'STEAM', 'STEAD', 'STEAL', 'STEAK', 'SPEAK', 'SPEAR', 'SMEAR', 'CLEAR', 'CLEAN', 'BEACH',
+                'TEACH', 'REACH', 'PEACH', 'PEACE', 'PHASE', 'CHASE', 'CHOSE', 'CLOSE', 'CLONE', 'ALONE',
+                'STONE', 'SCORE', 'STORE', 'SHORE', 'SHONE', 'PHONE', 'PRONE', 'DRONE', 'CRONE', 'GRIME'
+            ];
+        }
+        
         // Make a guess using advanced strategy
         function makeGuess() {
             if (!gameActive || currentGuess >= 6) return;
@@ -499,9 +515,11 @@
             console.log(`[DEBUG] Available words: ${availableWords.length} (${availableWords.join(', ')})`);
             
             if (currentGuess === 0) {
-                // First guess: use optimal starting word
-                guess = usedWords.includes('LEAST') ? 'ADIEU' : 'LEAST';
-                console.log(`[DEBUG] Branch: First guess -> ${guess}`);
+                // First guess: randomly select from best starting words
+                const bestStartingWords = getBestStartingWords();
+                const availableStartingWords = bestStartingWords.filter(word => !usedWords.includes(word));
+                guess = availableStartingWords[Math.floor(Math.random() * availableStartingWords.length)];
+                console.log(`[DEBUG] Branch: First guess (random from ${availableStartingWords.length} options) -> ${guess}`);
             } else if (availableWords.length === 1) {
                 // Only one option left
                 guess = availableWords[0];
