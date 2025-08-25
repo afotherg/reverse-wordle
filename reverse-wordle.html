@@ -96,41 +96,19 @@
         
         /* Removed legacy bottom grading UI styles */
         
-        .undo-button {
-            position: fixed;
-            bottom: 70px;
-            right: 20px;
-            z-index: 15;
-            background-color: #ff6b6b;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .undo-button:hover:not(:disabled) {
-            background-color: #ff5252;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-        }
-        
-        .undo-button:disabled {
-            background-color: #ccc;
-            color: #666;
-            cursor: not-allowed;
-            opacity: 0.6;
-        }
         
         /* end removed styles */
         
         .control-buttons {
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .button-row {
+            display: flex;
             gap: 15px;
+            justify-content: center;
         }
         
         button {
@@ -186,14 +164,17 @@
         </div>
         
         <div class="control-buttons">
-            <button onclick="startGame()">Start Game</button>
-            <button id="submitButton" onclick="submitFeedback()" disabled>Submit Feedback</button>
-            <button onclick="resetGame()">Reset</button>
+            <div class="button-row" id="gameButtons" style="display: none;">
+                <button id="submitButton" onclick="submitFeedback()" disabled>Submit</button>
+                <button id="undoButton" onclick="undoLastGuess()" disabled>Undo</button>
+            </div>
+            <div class="button-row">
+                <button onclick="startGame()">Start</button>
+                <button onclick="resetGame()">Reset</button>
+            </div>
         </div>
     </div>
     
-    <!-- Floating undo button -->
-    <button id="undoButton" class="undo-button" onclick="undoLastGuess()" disabled>Undo Last Guess</button>
 
     <script>
         // Game state
@@ -240,6 +221,10 @@
             
             initializeBoard();
             document.getElementById('status').textContent = 'Think of a word, then click to see my guess!';
+            
+            // Show game buttons
+            document.getElementById('gameButtons').style.display = 'flex';
+            
             updateUndoButton();
             updateSubmitButton();
             
@@ -258,6 +243,10 @@
             
             initializeBoard();
             document.getElementById('status').textContent = 'Click "Start Game" to begin!';
+            
+            // Hide game buttons
+            document.getElementById('gameButtons').style.display = 'none';
+            
             updateUndoButton();
             updateSubmitButton();
         }
