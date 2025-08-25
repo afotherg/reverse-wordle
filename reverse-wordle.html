@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Reverse Wordle</title>
     <style>
         body {
@@ -15,6 +15,8 @@
             color: white;
             min-height: 100vh;
             box-sizing: border-box;
+            /* Disable iOS double-tap zoom */
+            touch-action: manipulation;
         }
         
         h1 {
@@ -65,6 +67,8 @@
             text-transform: uppercase;
             cursor: pointer;
             transition: all 0.2s ease;
+            /* Disable iOS double-tap zoom */
+            touch-action: manipulation;
         }
         
         .letter-tile:hover {
@@ -120,6 +124,8 @@
             cursor: pointer;
             background-color: #818384;
             color: white;
+            /* Disable iOS double-tap zoom */
+            touch-action: manipulation;
         }
         
         button:hover {
